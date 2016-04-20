@@ -1,21 +1,21 @@
 {
   "name": "react-tabs",
   "version": "0.5.3",
-  "description": "React tabs component",
+  "description": "React tabs component [FORK]",
   "main": "dist/main.js",
   "scripts": {
     "bundle": "babel lib --out-dir dist"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/rackt/react-tabs.git"
+    "url": "https://github.com/entwicklerstube/react-tabs.git"
   },
   "author": "Michael J. Zoidl",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/rackt/react-tabs/issues"
+    "url": "https://github.com/entwicklerstube/react-tabs/issues"
   },
-  "homepage": "https://github.com/rackt/react-tabs",
+  "homepage": "https://github.com/entwicklerstube/react-tabs",
   "keywords": [
     "react",
     "tabs",
@@ -32,6 +32,9 @@
     "react-dom": "^0.14.7",
     "react-modal": "rackt/react-modal"
   },
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "classnames": "^2.2",
     "js-stylesheet": "^0.0.1"
