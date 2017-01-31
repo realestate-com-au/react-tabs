@@ -1,21 +1,22 @@
 {
   "name": "react-tabs",
   "version": "0.5.3",
-  "description": "React tabs component [FORK]",
-  "main": "dist/main.js",
+  "description": "React tabs component",
+  "main": "lib/main.js",
   "scripts": {
-    "bundle": "babel lib --out-dir dist"
+    "test": "./node_modules/.bin/rackt test --single-run --browsers Firefox",
+    "start": "./node_modules/.bin/rackt server"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/entwicklerstube/react-tabs.git"
+    "url": "https://github.com/rackt/react-tabs.git"
   },
-  "author": "Michael J. Zoidl",
+  "author": "Matt Zabriskie",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/entwicklerstube/react-tabs/issues"
+    "url": "https://github.com/rackt/react-tabs/issues"
   },
-  "homepage": "https://github.com/entwicklerstube/react-tabs",
+  "homepage": "https://github.com/rackt/react-tabs",
   "keywords": [
     "react",
     "tabs",
@@ -23,18 +24,16 @@
     "react-component"
   ],
   "peerDependencies": {
-    "react-dom": "^15.0.1"
+    "react": "^0.14.7",
+    "react-dom": "^0.14.7"
   },
   "devDependencies": {
     "rackt-cli": "^0.5.4",
-    "react": "^15.0.1",
-    "react-addons-test-utils": "^15.0.1",
-    "react-dom": "^15.0.1",
-    "react-modal": "rackt/react-modal"
+    "react": "^0.14.7",
+    "react-dom": "^0.14.7",
+    "react-modal": "rackt/react-modal",
+    "react-addons-test-utils": "^0.14.7"
   },
-  "files": [
-    "dist"
-  ],
   "dependencies": {
     "classnames": "^2.2",
     "js-stylesheet": "^0.0.1"
