@@ -1,13 +1,9 @@
 sudo: false
 language: node_js
 node_js:
+  - "4"
   - "5"
-before_script:
-  - export DISPLAY=:99.0
-  - sh -e /etc/init.d/xvfb start
-branches:
-  only:
-    - master
-email:
-  on_failure: change
-  on_success: never
+  - "6"
+script:
+  - npm run lint
+  - npm test

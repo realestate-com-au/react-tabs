@@ -1,34 +1,35 @@
-# react-tabs [![Build Status](https://travis-ci.org/reactjs/react-tabs.svg?branch=master)](https://travis-ci.org/reactjs/react-tabs)
+#  A fork of [react-tabs](https://github.com/reactjs/react-tabs) which supports server side rendering
 
-React tabs component
+The current version of react tabs cannot be used for server side rendering. Check the issue here - [#56](https://github.com/reactjs/react-tabs/issues/56)
+
+This is a hacky fix to get it working by passing a custom id generation function to the `<Tabs>` component, which does not use a stateful counter to assign ids to the children of `<Tabs>`
+
+It isn't the ideal solution, but till the original authors have a better idea, this seems like the only way to get it working.
+
+> Supports React ^0.14.0 or ^15.0.0
 
 ## Installing
 
 ```bash
-$ npm install react-tabs
+$ npm install react-tabs-isomorphic --save
 ```
-
-## Demo
-
-https://reactcommunity.org/react-tabs/example/
 
 ## Example
 
 ```js
-var React = require('react');
-var ReactDOM = require('react-dom');
-var ReactTabs = require('react-tabs');
-var Tab = ReactTabs.Tab;
-var Tabs = ReactTabs.Tabs;
-var TabList = ReactTabs.TabList;
-var TabPanel = ReactTabs.TabPanel;
+import React, { Component } from 'react';
+import { render } from 'react-dom';
+import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 
-var App = React.createClass({
-  handleSelect: function (index, last) {
-	console.log('Selected tab: ' + index + ', Last tab: ' + last);
-  },
+let idCounter = 0;
+const generateIds = () => `custom-id-${idCounter++}`
 
-  render: function () {
+class App extends Component {
+  handleSelect(index, last) {
+    console.log('Selected tab: ' + index + ', Last tab: ' + last);
+  }
+
+  render() {
     return (
       {/*
         <Tabs/> is a composite component and acts as the main container.
@@ -48,6 +49,7 @@ var App = React.createClass({
       <Tabs
         onSelect={this.handleSelect}
         selectedIndex={2}
+        generateIdsFn={generateIds}
       >
 
         {/*
@@ -97,10 +99,9 @@ var App = React.createClass({
       </Tabs>
     );
   }
-});
+}
 
-ReactDOM.render(<App/>, document.getElementById('container'));
-
+render(<App/>, document.getElementById('container'));
 ```
 
 ## License

@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { Tab, Tabs, TabList, TabPanel } from '../../lib/main';
+import { Tab, Tabs, TabList, TabPanel } from '../../src/main';
 
 const App = React.createClass({
   render() {
@@ -17,6 +17,8 @@ const App = React.createClass({
             <Tab>React</Tab>
             <Tab>Ember</Tab>
             <Tab>Angular</Tab>
+
+            <span>+</span>
           </TabList>
 
           <TabPanel>
@@ -83,7 +85,7 @@ const App = React.createClass({
         </Tabs>
       </div>
     );
-  }
+  },
 });
 
-ReactDOM.render(<App/>, document.getElementById('example'));
+ReactDOM.render(<App />, document.getElementById('example'));

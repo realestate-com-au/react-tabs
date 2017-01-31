@@ -1,9 +1,10 @@
-import React, {PropTypes, cloneElement} from 'react';
+import React, { PropTypes, cloneElement } from 'react';
 import { findDOMNode } from 'react-dom';
 import cx from 'classnames';
 import jss from 'js-stylesheet';
 import uuid from '../helpers/uuid';
 import childrenPropType from '../helpers/childrenPropType';
+import Tab from './Tab';
 
 // Determine if a node from event.target is a Tab element
 function isTabNode(node) {
@@ -26,86 +27,49 @@ module.exports = React.createClass({
     onSelect: PropTypes.func,
     focus: PropTypes.bool,
     children: childrenPropType,
-    forceRenderTabPanel: PropTypes.bool
+    forceRenderTabPanel: PropTypes.bool,
+    generateIdsFn: PropTypes.func,
   },
 
   childContextTypes: {
-    forceRenderTabPanel: PropTypes.bool
+    forceRenderTabPanel: PropTypes.bool,
   },
 
   statics: {
     setUseDefaultStyles(use) {
       useDefaultStyles = use;
-    }
+    },
   },
 
   getDefaultProps() {
     return {
       selectedIndex: -1,
       focus: false,
-      forceRenderTabPanel: false
+      forceRenderTabPanel: false,
     };
   },
 
   getInitialState() {
-    return this.copyPropsToState(this.props);
+    return this.copyPropsToState(this.props, this.state);
   },
 
   getChildContext() {
     return {
-      forceRenderTabPanel: this.props.forceRenderTabPanel
+      forceRenderTabPanel: this.props.forceRenderTabPanel,
     };
   },
 
   componentDidMount() {
     if (useDefaultStyles) {
-      jss(require('../helpers/styles.js'));
+      jss(require('../helpers/styles.js')); // eslint-disable-line global-require
     }
   },
 
   componentWillReceiveProps(newProps) {
-    this.setState(this.copyPropsToState(newProps));
-  },
-
-  handleClick(e) {
-    let node = e.target;
-    do {
-      if (isTabNode(node)) {
-        if (isTabDisabled(node)) {
-          return;
-        }
-
-        const index = [].slice.call(node.parentNode.children).indexOf(node);
-        this.setSelected(index);
-        return;
-      }
-    } while ((node = node.parentNode) !== null);
-  },
-
-  handleKeyDown(e) {
-    if (isTabNode(e.target)) {
-      let index = this.state.selectedIndex;
-      let preventDefault = false;
-
-      // Select next tab to the left
-      if (e.keyCode === 37 || e.keyCode === 38) {
-        index = this.getPrevTab(index);
-        preventDefault = true;
-      }
-      // Select next tab to the right
-      /* eslint brace-style:0 */
-      else if (e.keyCode === 39 || e.keyCode === 40) {
-        index = this.getNextTab(index);
-        preventDefault = true;
-      }
-
-      // This prevents scrollbars from moving around
-      if (preventDefault) {
-        e.preventDefault();
-      }
-
-      this.setSelected(index, true);
-    }
+    // Use a transactional update to prevent race conditions
+    // when reading the state in copyPropsToState
+    // See https://github.com/reactjs/react-tabs/issues/51
+    this.setState(state => this.copyPropsToState(newProps, state));
   },
 
   setSelected(index, focus) {
@@ -117,12 +81,17 @@ module.exports = React.createClass({
     // Keep reference to last index for event handler
     const last = this.state.selectedIndex;
 
-    // Update selected index
-    this.setState({ selectedIndex: index, focus: focus === true });
+    // Check if the change event handler cancels the tab change
+    let cancel = false;
 
     // Call change event handler
     if (typeof this.props.onSelect === 'function') {
-      this.props.onSelect(index, last);
+      cancel = this.props.onSelect(index, last) === false;
+    }
+
+    if (!cancel) {
+      // Update selected index
+      this.setState({ selectedIndex: index, focus: focus === true });
     }
   },
 
@@ -188,11 +157,11 @@ module.exports = React.createClass({
   },
 
   getTab(index) {
-    return this.refs['tabs-' + index];
+    return this.refs[`tabs-${index}`];
   },
 
   getPanel(index) {
-    return this.refs['panels-' + index];
+    return this.refs[`panels-${index}`];
   },
 
   getChildren() {
@@ -202,14 +171,15 @@ module.exports = React.createClass({
     const state = this.state;
     const tabIds = this.tabIds = this.tabIds || [];
     const panelIds = this.panelIds = this.panelIds || [];
+    const generateIdsFn = this.props.generateIdsFn ? this.props.generateIdsFn : uuid;
     let diff = this.tabIds.length - this.getTabsCount();
 
     // Add ids if new tabs have been added
     // Don't bother removing ids, just keep them in case they are added again
     // This is more efficient, and keeps the uuid counter under control
     while (diff++ < 0) {
-      tabIds.push(uuid());
-      panelIds.push(uuid());
+      tabIds.push(generateIdsFn());
+      panelIds.push(generateIdsFn());
     }
 
     // Map children to dynamically setup refs
@@ -234,7 +204,7 @@ module.exports = React.createClass({
               return null;
             }
 
-            const ref = 'tabs-' + index;
+            const ref = `tabs-${index}`;
             const id = tabIds[index];
             const panelId = panelIds[index];
             const selected = state.selectedIndex === index;
@@ -242,14 +212,18 @@ module.exports = React.createClass({
 
             index++;
 
-            return cloneElement(tab, {
-              ref,
-              id,
-              panelId,
-              selected,
-              focus
-            });
-          })
+            if (tab.type === Tab) {
+              return cloneElement(tab, {
+                ref,
+                id,
+                panelId,
+                selected,
+                focus,
+              });
+            }
+
+            return tab;
+          }),
         });
 
         // Reset index for panels
@@ -257,7 +231,7 @@ module.exports = React.createClass({
       }
       // Clone TabPanel components to have refs
       else {
-        const ref = 'panels-' + index;
+        const ref = `panels-${index}`;
         const id = panelIds[index];
         const tabId = tabIds[index];
         const selected = state.selectedIndex === index;
@@ -268,12 +242,103 @@ module.exports = React.createClass({
           ref,
           id,
           tabId,
-          selected
+          selected,
         });
       }
 
       return result;
     });
+  },
+
+  handleKeyDown(e) {
+    if (this.isTabFromContainer(e.target)) {
+      let index = this.state.selectedIndex;
+      let preventDefault = false;
+
+      // Select next tab to the left
+      if (e.keyCode === 37 || e.keyCode === 38) {
+        index = this.getPrevTab(index);
+        preventDefault = true;
+      }
+      // Select next tab to the right
+      /* eslint brace-style:0 */
+      else if (e.keyCode === 39 || e.keyCode === 40) {
+        index = this.getNextTab(index);
+        preventDefault = true;
+      }
+
+      // This prevents scrollbars from moving around
+      if (preventDefault) {
+        e.preventDefault();
+      }
+
+      this.setSelected(index, true);
+    }
+  },
+
+  handleClick(e) {
+    let node = e.target;
+    do { // eslint-disable-line no-cond-assign
+      if (this.isTabFromContainer(node)) {
+        if (isTabDisabled(node)) {
+          return;
+        }
+
+        const index = [].slice.call(node.parentNode.children).indexOf(node);
+        this.setSelected(index);
+        return;
+      }
+    } while ((node = node.parentNode) !== null);
+  },
+
+  // This is an anti-pattern, so sue me
+  copyPropsToState(props, state) {
+    let selectedIndex = props.selectedIndex;
+
+    // If no selectedIndex prop was supplied, then try
+    // preserving the existing selectedIndex from state.
+    // If the state has not selectedIndex, default
+    // to the first tab in the TabList.
+    //
+    // TODO: Need automation testing around this
+    // Manual testing can be done using examples/focus
+    // See 'should preserve selectedIndex when typing' in specs/Tabs.spec.js
+    if (selectedIndex === -1) {
+      if (state && state.selectedIndex) {
+        selectedIndex = state.selectedIndex;
+      } else {
+        selectedIndex = 0;
+      }
+    }
+
+    return {
+      selectedIndex,
+      focus: props.focus,
+    };
+  },
+
+  /**
+   * Determine if a node from event.target is a Tab element for the current Tabs container.
+   * If the clicked element is not a Tab, it returns false.
+   * If it finds another Tabs container between the Tab and `this`, it returns false.
+   */
+  isTabFromContainer(node) {
+    // return immediately if the clicked element is not a Tab.
+    if (!isTabNode(node)) {
+      return false;
+    }
+
+    // Check if the first occurrence of a Tabs container is `this` one.
+    let nodeAncestor = node.parentElement;
+    const tabsNode = findDOMNode(this);
+    do {
+      if (nodeAncestor === tabsNode) return true;
+      else if (nodeAncestor.getAttribute('data-tabs')) break;
+
+      nodeAncestor = nodeAncestor.parentElement;
+    } while (nodeAncestor);
+
+    return false;
   },
 
   render() {
@@ -296,44 +361,32 @@ module.exports = React.createClass({
       }, 0);
     }
 
+    const { className, ...attributes } = this.props;
+
+    // Delete all known props, so they don't get added to DOM
+    delete attributes.selectedIndex;
+    delete attributes.onSelect;
+    delete attributes.focus;
+    delete attributes.children;
+    delete attributes.forceRenderTabPanel;
+    delete attributes.onClick;
+    delete attributes.onKeyDown;
+    delete attributes.generateIdsFn;
+
     return (
       <div
+        {...attributes}
         className={cx(
           'ReactTabs',
           'react-tabs',
-          this.props.className
+          className
         )}
         onClick={this.handleClick}
         onKeyDown={this.handleKeyDown}
+        data-tabs
       >
         {this.getChildren()}
       </div>
     );
   },
-
-  // This is an anti-pattern, so sue me
-  copyPropsToState(props) {
-    let selectedIndex = props.selectedIndex;
-
-    // If no selectedIndex prop was supplied, then try
-    // preserving the existing selectedIndex from state.
-    // If the state has not selectedIndex, default
-    // to the first tab in the TabList.
-    //
-    // TODO: Need automation testing around this
-    // Manual testing can be done using examples/focus
-    // See 'should preserve selectedIndex when typing' in specs/Tabs.spec.js
-    if (selectedIndex === -1) {
-      if (this.state && this.state.selectedIndex) {
-        selectedIndex = this.state.selectedIndex;
-      } else {
-        selectedIndex = 0;
-      }
-    }
-
-    return {
-      selectedIndex: selectedIndex,
-      focus: props.focus
-    };
-  }
 });

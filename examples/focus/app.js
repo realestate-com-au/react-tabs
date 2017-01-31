@@ -1,15 +1,20 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { Tab, Tabs, TabList, TabPanel } from '../../lib/main';
+import { Tab, Tabs, TabList, TabPanel } from '../../src/main';
 
 const App = React.createClass({
-  handleInputChange() {
+  getInitialState() {
+    return { inputValue: '' };
+  },
+
+  handleInputChange(e) {
     this.forceUpdate();
+    this.setState({ inputValue: e.target.value });
   },
 
   render() {
     return (
-      <div style={{padding: 50}}>
+      <div style={{ padding: 50 }}>
         <Tabs>
           <TabList>
             <Tab>First</Tab>
@@ -23,12 +28,13 @@ const App = React.createClass({
             <input
               type="text"
               onChange={this.handleInputChange}
+              value={this.state.inputValue}
             />
           </TabPanel>
         </Tabs>
       </div>
 	);
-  }
+  },
 });
 
-ReactDOM.render(<App/>, document.getElementById('example'));
+ReactDOM.render(<App />, document.getElementById('example'));
